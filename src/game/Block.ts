@@ -1,6 +1,6 @@
 import { BoxCollisionBody } from '../engine/physics/BoxCollisionBody';
 import { CollisionBody } from '../engine/physics/CollisionBody';
-import { Vec2DLegacy } from '../engine/vec/Vec2DLegacy';
+import { Vec2D } from '../engine/vec/Vec2D';
 import { RoadBlockRenderable } from './renderables/RoadBlockRenderable';
 
 export class Block {
@@ -8,9 +8,9 @@ export class Block {
     readonly collider: CollisionBody;
 
     constructor(
-        public position: Vec2DLegacy,
+        public readonly position = new Vec2D(),
+        public readonly size = new Vec2D(),
         public angle: number,
-        public size: Vec2DLegacy,
         public color: string
     ) {
         this.renderable = new RoadBlockRenderable({

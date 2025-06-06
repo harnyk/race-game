@@ -1,10 +1,10 @@
-import { Vec2DLegacy } from "../../engine/vec/Vec2DLegacy";
-import { Renderable } from "../../engine/Renderable";
-import { Viewport } from "../../engine/Viewport";
-
+import { Renderable } from '../../engine/Renderable';
+import { Viewport } from '../../engine/Viewport';
+import { Vec2D } from '../../engine/vec/Vec2D';
 
 export class CompassRenderable implements Renderable {
     size: number;
+    #viewportCenter: Vec2D = new Vec2D();
 
     constructor(size = 50) {
         this.size = size;
@@ -12,10 +12,10 @@ export class CompassRenderable implements Renderable {
 
     render(ctx: CanvasRenderingContext2D, viewport: Viewport) {
         const padding = 10;
-        const center = new Vec2DLegacy(
-            viewport.canvasSize.x - this.size / 2 - padding,
-            this.size / 2 + padding
-        );
+        this.#viewportCenter.x =
+            viewport.canvasSize.x - this.size / 2 - padding;
+        this.#viewportCenter.y = this.size / 2 + padding;
+        const center = this.#viewportCenter;
 
         ctx.save();
 

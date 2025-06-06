@@ -1,5 +1,5 @@
 import { RigidBody2D } from '../engine/physics/RigidBody2D';
-import { Vec2DLegacy } from '../engine/vec/Vec2DLegacy';
+import { Vec2D } from '../engine/vec/Vec2D';
 
 export class VehicleController {
     private body: RigidBody2D;
@@ -7,7 +7,7 @@ export class VehicleController {
     private steering = 0;
 
     maxForce = 10;
-    maxSteeringRate = Math.PI; // рад/сек, ограничение на поворот
+    maxSteeringRate = Math.PI;
     friction = 5;
     angularFriction = 3;
     maxSpeed = 10;
@@ -40,19 +40,24 @@ export class VehicleController {
         this.#applyFriction(dt);
     }
 
+    #forward = new Vec2D();
+    #force = new Vec2D();
+
     #applyThrottleForce() {
-        const forward = Vec2DLegacy.fromPolar(1, this.body.angle);
-        const force = forward.scale(this.throttle * this.maxForce);
-        this.body.applyForce(force);
+        this.#force
+            .assignPolar(1, this.body.angle)
+            .scale(this.throttle * this.maxForce);
+        this.body.applyForce(this.#force);
     }
 
     #alignVelocityWithHeading(dt: number) {
-        const velocity = this.body.velocity;
+        const velocity = this.body.velocity.toImmutable();
+
         const speed = velocity.length;
         if (speed <= 0.01 || Math.abs(this.steering) <= 0.01) return;
 
-        const forward = Vec2DLegacy.fromPolar(1, this.body.angle);
-        const alignment = forward.dot(velocity.normalize());
+        this.#forward.assignPolar(1, this.body.angle);
+        const alignment = this.#forward.dot(velocity) / velocity.length;
 
         const currentDir = velocity.angle;
         const desiredDir =
@@ -66,7 +71,7 @@ export class VehicleController {
         const turn = Math.sign(delta) * Math.min(Math.abs(delta), maxTurn);
         const newAngle = currentDir + turn;
 
-        this.body.velocity = Vec2DLegacy.fromPolar(speed, newAngle);
+        this.body.velocity.assignPolar(speed, newAngle);
     }
 
     #rotateBodyIfMoving(dt: number) {
@@ -88,20 +93,18 @@ export class VehicleController {
 
     #applyFriction(dt: number) {
         const decay = Math.exp(-this.friction * dt);
-        this.body.velocity = this.body.velocity.scale(decay);
+        this.body.velocity.scale(decay);
         this.body.angularVelocity *= Math.exp(-this.angularFriction * dt);
 
-        // Ограничитель скорости
+        // Speed limit
         const speed = this.body.velocity.length;
         if (speed > this.maxSpeed) {
-            this.body.velocity = this.body.velocity
-                .normalize()
-                .scale(this.maxSpeed);
+            this.body.velocity.normalize().scale(this.maxSpeed);
         }
 
-        // Обнуление малой скорости
+        // Nullify small speed
         if (speed < this.velocityEpsilon && this.throttle === 0) {
-            this.body.velocity = Vec2DLegacy.zero();
+            this.body.velocity.zero();
             this.body.angularVelocity = 0;
         }
     }

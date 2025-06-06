@@ -1,14 +1,13 @@
-import { Vec2DLegacy } from '../vec/Vec2DLegacy';
+import { Vec2D } from '../vec/Vec2D';
 import { CollisionBody } from './CollisionBody';
 import { BodyType } from './CollisionDetector';
 
-
 export class RegularPolygonCollisionBody extends CollisionBody {
-    radius: number;
-    sides: number;
+    private radius: number;
+    private sides: number;
 
     constructor(
-        position: Vec2DLegacy,
+        position: Vec2D,
         radius: number,
         sides: number,
         angle = 0,
@@ -17,14 +16,27 @@ export class RegularPolygonCollisionBody extends CollisionBody {
         super(position, angle, type);
         this.radius = radius;
         this.sides = sides;
+        this.preallocate();
     }
 
-    getVertices(): Vec2DLegacy[] {
-        const verts: Vec2DLegacy[] = [];
+    protected preallocateVertices(): void {
         for (let i = 0; i < this.sides; i++) {
-            const local = Vec2DLegacy.fromPolar(this.radius, (2 * Math.PI * i) / this.sides);
-            verts.push(local.rotate(this.angle).add(this.position));
+            this.vertices.push(new Vec2D());
         }
-        return verts;
+    }
+
+    protected preallocateAxes(): void {
+        for (let i = 0; i < this.sides; i++) {
+            this.axes.push(new Vec2D());
+        }
+    }
+
+    protected computeVertices(): void {
+        for (let i = 0; i < this.sides; i++) {
+            this.vertices[i]
+                .assignPolar(this.radius, (2 * Math.PI * i) / this.sides)
+                .rotate(this.angle)
+                .add(this.position);
+        }
     }
 }

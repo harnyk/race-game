@@ -2,6 +2,8 @@ export class Vec2DLegacy {
     x: number;
     y: number;
 
+    public readonly isLegacy = true;
+
     constructor(x: number, y: number) {
         this.x = x;
         this.y = y;

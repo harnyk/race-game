@@ -1,29 +1,52 @@
-import { Vec2DLegacy } from '../vec/Vec2DLegacy';
+import { IVec2D } from '../vec/IVec2D';
+import { ImmutableVec2D, Vec2D } from '../vec/Vec2D';
 import { BodyType } from './CollisionDetector';
 
-
 export abstract class CollisionBody {
-    position: Vec2DLegacy;
+    readonly position = new Vec2D();
     angle: number;
     type: BodyType;
 
-    constructor(position: Vec2DLegacy, angle = 0, type: BodyType = 'dynamic') {
-        this.position = position;
+    protected readonly axes: Vec2D[] = [];
+    protected readonly vertices: Vec2D[] = [];
+
+    constructor(position: IVec2D, angle = 0, type: BodyType = 'dynamic') {
+        this.position.assign(position);
         this.angle = angle;
         this.type = type;
     }
 
-    abstract getVertices(): Vec2DLegacy[];
+    protected abstract preallocateVertices(): void;
+    protected abstract preallocateAxes(): void;
+    protected abstract computeVertices(): void;
 
-    getAxes(): Vec2DLegacy[] {
+    protected preallocate(): void {
+        this.preallocateVertices();
+        this.preallocateAxes();
+    }
+
+    protected computeAxes(): void {
         const verts = this.getVertices();
-        const axes: Vec2DLegacy[] = [];
+        const axes = this.axes;
+
         for (let i = 0; i < verts.length; i++) {
             const p1 = verts[i];
             const p2 = verts[(i + 1) % verts.length];
-            const edge = p2.sub(p1);
-            axes.push(new Vec2DLegacy(-edge.y, edge.x).normalize());
+            const axis = axes[i];
+            axis.assign(p2);
+            axis.sub(p1);
+            axis.set(-axis.y, axis.x);
+            axis.normalize();
         }
-        return axes;
+    }
+
+    getVertices() {
+        this.computeVertices();
+        return this.vertices as ImmutableVec2D[];
+    }
+
+    getAxes() {
+        this.computeAxes();
+        return this.axes as ImmutableVec2D[];
     }
 }

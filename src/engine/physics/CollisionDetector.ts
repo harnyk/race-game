@@ -1,4 +1,4 @@
-import { Vec2DLegacy } from '../vec/Vec2DLegacy';
+import { ImmutableVec2D, Vec2D } from '../vec/Vec2D';
 import { CollisionBody } from './CollisionBody';
 
 export type BodyType = 'static' | 'dynamic';
@@ -17,6 +17,8 @@ export class CollisionDetector {
         if (index >= 0) this.bodies.splice(index, 1);
     }
 
+    readonly #tmpAxis = new Vec2D();
+    readonly #tmpVec = new Vec2D();
     detect(): CollisionPair[] {
         const pairs: CollisionPair[] = [];
         for (let i = 0; i < this.bodies.length; i++) {
@@ -24,7 +26,7 @@ export class CollisionDetector {
             for (let j = i + 1; j < this.bodies.length; j++) {
                 const b = this.bodies[j];
                 if (a.type === 'static' && b.type === 'static') continue;
-                if (this.#overlap(a, b)) {
+                if (this.#overlap(a, b, this.#tmpAxis, this.#tmpVec)) {
                     pairs.push({ a, b });
                 }
             }
@@ -32,23 +34,53 @@ export class CollisionDetector {
         return pairs;
     }
 
-    #overlap(a: CollisionBody, b: CollisionBody): boolean {
-        const axes = [...a.getAxes(), ...b.getAxes()];
-
+    #overlap(
+        a: CollisionBody,
+        b: CollisionBody,
+        axisBuf: Vec2D,
+        tmp: Vec2D
+    ): boolean {
+        const axesA = a.getAxes();
+        const axesB = b.getAxes();
         const vertsA = a.getVertices();
         const vertsB = b.getVertices();
 
-        for (const axis of axes) {
-            const [minA, maxA] = this.#project(vertsA, axis);
-            const [minB, maxB] = this.#project(vertsB, axis);
-            if (maxA < minB || maxB < minA) return false;
+        for (let i = 0; i < axesA.length; i++) {
+            if (!this.#testAxis(vertsA, vertsB, axesA[i], axisBuf, tmp))
+                return false;
+        }
+        for (let i = 0; i < axesB.length; i++) {
+            if (!this.#testAxis(vertsA, vertsB, axesB[i], axisBuf, tmp))
+                return false;
         }
         return true;
     }
 
-    #project(points: Vec2DLegacy[], axis: Vec2DLegacy): [number, number] {
-        const norm = axis.normalize();
-        const values = points.map((p) => p.dot(norm));
-        return [Math.min(...values), Math.max(...values)];
+    #testAxis(
+        vertsA: ImmutableVec2D[],
+        vertsB: ImmutableVec2D[],
+        axis: ImmutableVec2D,
+        axisBuf: Vec2D,
+        tmp: Vec2D
+    ): boolean {
+        axisBuf.assign(axis).normalize();
+
+        let minA = Infinity;
+        let maxA = -Infinity;
+        for (let i = 0; i < vertsA.length; i++) {
+            const dot = tmp.assign(vertsA[i]).dot(axisBuf);
+            if (dot < minA) minA = dot;
+            if (dot > maxA) maxA = dot;
+        }
+
+        let minB = Infinity;
+        let maxB = -Infinity;
+        for (let i = 0; i < vertsB.length; i++) {
+            const dot = tmp.assign(vertsB[i]).dot(axisBuf);
+            if (dot < minB) minB = dot;
+            if (dot > maxB) maxB = dot;
+        }
+
+        return !(maxA < minB || maxB < minA);
     }
 }
