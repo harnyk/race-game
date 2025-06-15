@@ -23,7 +23,7 @@ const App: React.FC = () => {
     <GameCanvas key="game" paused={paused} />,
   ];
   if (paused) {
-    layers.push(<PauseMenu key="pause" />);
+    layers.push(<PauseMenu key="pause" onExit={() => setPaused(false)} />);
   }
   layers.push(<UiOverlay key="ui" />);
 
