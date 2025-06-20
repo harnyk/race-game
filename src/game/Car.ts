@@ -23,7 +23,7 @@ export class Car extends Node {
         super();
         this.body = new RigidBody2D(initialPosition, initialRotation, 1, 0.1);
         
-        this.renderable = new CarRenderable(this.body.position);
+        this.renderable = new CarRenderable();
         
         this.controller = new VehicleController(this.body);
         this.controller.setFriction(0.3);

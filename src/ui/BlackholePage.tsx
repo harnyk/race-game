@@ -1,7 +1,7 @@
 import React from 'react';
 import { ThreeBodiesGameApp } from '../threebodies/ThreeBodiesGameApp';
 
-const AboutPage: React.FC = () => (
+const BlackholePage: React.FC = () => (
     <div className="flex items-center justify-center h-screen">
         <div>
             <ThreeBodiesGameApp />
@@ -9,4 +9,4 @@ const AboutPage: React.FC = () => (
     </div>
 );
 
-export default AboutPage;
+export default BlackholePage;

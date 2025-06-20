@@ -5,7 +5,6 @@ export const ThreeBodiesGameApp: React.FC = () => {
     return (
         <GameCanvas
             gameFactory={(canvas) => new ThreeBodiesGame(canvas)}
-            key="game"
             paused={false}
         />
     );

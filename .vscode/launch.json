@@ -14,8 +14,8 @@
         {
             "type": "chrome",
             "request": "launch",
-            "name": "ThreeBodies",
-            "url": "http://localhost:5173/about",
+            "name": "BlackHole",
+            "url": "http://localhost:5173/blackhole",
             "webRoot": "${workspaceFolder}"
         }
     ]

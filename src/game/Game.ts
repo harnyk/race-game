@@ -1,12 +1,8 @@
-import { Context } from '../engine/Context';
-import { FixedTimestepIntegrator } from '../engine/FixedTimestepIntegrator';
+import { BaseGame } from '../common/BaseGame';
 import { fromDeg } from '../engine/fromDeg';
 import { CollisionDetector } from '../engine/physics/CollisionDetector';
 import { Vec2D } from '../engine/vec/Vec2D';
 import { Vec2DAverager } from '../engine/Vec2DAverager';
-import { Viewport } from '../engine/Viewport';
-import { World } from '../engine/World';
-import { WorldRenderer } from '../engine/WorldRenderer';
 import { bindVec2 } from '../engine/bindVec2';
 import { Block } from './Block';
 import { Car } from './Car';
@@ -20,13 +16,7 @@ import { TerroristEyesRenderable } from './renderables/TerroristEyesRenderable';
 import { TerroristIndicatorRenderable } from './renderables/TerroristIndicatorRenderable';
 import { Terrorist } from './Terrorist';
 
-export class Game {
-    private context = new Context();
-    private canvas: HTMLCanvasElement;
-    private renderer: WorldRenderer;
-    private viewport: Viewport;
-    private world = new World(this.context);
-    private integrator = new FixedTimestepIntegrator(60);
+export class Game extends BaseGame {
     private controller: KeyboardControl;
     private terroristGravityCenterAverager = new Vec2DAverager();
     private gameState = new GameStateManager();
@@ -34,37 +24,11 @@ export class Game {
     private terrorist!: Terrorist;
     private terroristEyes!: TerroristEyesRenderable;
     private collisionDetector!: CollisionDetector;
-    private paused = false;
 
     constructor(canvas: HTMLCanvasElement) {
-        this.canvas = canvas;
-        this.setupCanvasSize();
-        this.viewport = this.createViewport();
-        this.renderer = this.createRenderer();
+        super(canvas);
         this.controller = this.createController();
         this.initGameObjects();
-    }
-
-    private setupCanvasSize() {
-        this.canvas.width = document.body.clientWidth;
-        this.canvas.height = document.body.clientHeight;
-    }
-
-    private createViewport(): Viewport {
-        return new Viewport(
-            this.context,
-            Vec2D.set(new Vec2D(), 0, 0),
-            50,
-            Vec2D.set(new Vec2D(), this.canvas.width, this.canvas.height)
-        );
-    }
-
-    private createRenderer(): WorldRenderer {
-        return new WorldRenderer(
-            this.context,
-            this.canvas.getContext('2d')!,
-            this.viewport
-        );
     }
 
     private createController(): KeyboardControl {
@@ -240,46 +204,19 @@ export class Game {
         });
     }
 
-    public start() {
-        const loop = () => {
-            if (!this.paused) {
-                this.integrator.update((dt) => {
-                    if (!this.gameState.isPlaying()) return;
-                    this.applyMutualGravity();
-                    this.world.update(dt);
-                    this.checkVictoryOrDefeat();
-                });
-            } else {
-                this.integrator.reset();
-            }
-
-            this.updateCamera();
-            this.collisionDetector.detect();
-            this.renderer.render(this.world);
-
-            requestAnimationFrame(loop);
-        };
-
-        loop();
+    protected override update(dt: number) {
+        if (!this.gameState.isPlaying()) return;
+        this.applyMutualGravity();
+        super.update(dt);
+        this.checkVictoryOrDefeat();
     }
 
-    public resize(width: number, height: number) {
-        this.canvas.width = width;
-        this.canvas.height = height;
-        this.viewport.canvasSize.set(width, height);
+    protected override frame() {
+        this.updateCamera();
+        this.collisionDetector.detect();
+        super.frame();
     }
 
-    public pause() {
-        this.paused = true;
-    }
-
-    public resume() {
-        this.paused = false;
-    }
-
-    public togglePause() {
-        this.paused = !this.paused;
-    }
 
     private checkVictoryOrDefeat() {
         if (this.terroristGravityCenterAverager.count === 0) {

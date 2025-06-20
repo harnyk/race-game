@@ -1,84 +1,14 @@
-import { bindVec2 } from '../engine/bindVec2';
-import { Context } from '../engine/Context';
-import { FixedTimestepIntegrator } from '../engine/FixedTimestepIntegrator';
+import { BaseGame } from '../common/BaseGame';
 import { Grid } from '../engine/Grid';
-import { Node } from '../engine/Node';
-import { RigidBody2D } from '../engine/physics/RigidBody2D';
-import { Vec2D } from '../engine/vec/Vec2D';
-import { Viewport } from '../engine/Viewport';
-import { World } from '../engine/World';
-import { WorldRenderer } from '../engine/WorldRenderer';
+import { Planet } from './Planet';
 
-class PlanetRenderable extends Node {
-    constructor(
-        public readonly color: string = 'red',
-        public readonly mass = 1,
-        public readonly radius = 1
-    ) {
-        super();
-    }
-
-    public readonly position = new Vec2D();
-
-    render(ctx: CanvasRenderingContext2D, viewport: Viewport) {
-        ctx.save();
-
-        ctx.translate(this.position.x, this.position.y);
-        ctx.beginPath();
-        ctx.arc(0, 0, this.radius, 0, 2 * Math.PI);
-        ctx.fillStyle = this.color;
-        ctx.fill();
-
-        ctx.restore();
-    }
-}
-
-class Planet extends Node {
-    body: RigidBody2D;
-    renderable: PlanetRenderable;
-    constructor(
-        public readonly options: {
-            color: string;
-            radius: number;
-            mass: number;
-        }
-    ) {
-        super();
-        this.body = new RigidBody2D(new Vec2D(), 0, options.mass, 0);
-        this.renderable = new PlanetRenderable(
-            this.options.color,
-            options.mass,
-            options.radius
-        );
-
-        this.add(this.renderable);
-        this.add(this.body);
-
-        bindVec2(this.renderable, 'position').from(this.body, 'position');
-    }
-}
-
-export class ThreeBodiesGame {
-    private context = new Context();
-    private renderer: WorldRenderer;
-    private canvas: HTMLCanvasElement;
-    private viewport: Viewport;
-    private world = new World(this.context);
-    private integrator = new FixedTimestepIntegrator(60);
+export class ThreeBodiesGame extends BaseGame {
     private grid = new Grid(this.context, 10);
 
     private planets: Planet[] = [];
 
-    private setupCanvasSize() {
-        this.canvas.width = document.body.clientWidth;
-        this.canvas.height = document.body.clientHeight;
-    }
-
     constructor(canvas: HTMLCanvasElement) {
-        this.canvas = canvas;
-        this.setupCanvasSize();
-        this.viewport = this.createViewport();
-        this.renderer = this.createRenderer();
+        super(canvas);
 
         this.world.add(this.grid);
 
@@ -90,7 +20,7 @@ export class ThreeBodiesGame {
     }
 
     public generateRandomPlanets() {
-        for (let i = 0; i < 70; i++) {
+        for (let i = 0; i < 100; i++) {
             const mass = 2 ** (Math.random() * 4 + 0.3);
             const colorRed = Math.random() * 255;
             const colorGreen = Math.random() * 255;
@@ -113,23 +43,6 @@ export class ThreeBodiesGame {
                 radius: 0.5,
                 mass: 10000,
             })
-        );
-    }
-
-    private createViewport(): Viewport {
-        return new Viewport(
-            this.context,
-            Vec2D.set(new Vec2D(), 0, 0),
-            50,
-            Vec2D.set(new Vec2D(), this.canvas.width, this.canvas.height)
-        );
-    }
-
-    private createRenderer(): WorldRenderer {
-        return new WorldRenderer(
-            this.context,
-            this.canvas.getContext('2d')!,
-            this.viewport
         );
     }
 
@@ -164,7 +77,9 @@ export class ThreeBodiesGame {
 
     private updateViewportToFit(planets: Planet[]) {
         this.context.vectorPool.borrow((acquire) => {
-            const gamma = 1.5; // чувствительность к массе
+            // Exponent of mass
+            const gamma = 2;
+
             const weightedCenter = acquire();
             weightedCenter.zero();
 
@@ -177,7 +92,7 @@ export class ThreeBodiesGame {
             }
             weightedCenter.scale(1 / totalWeight);
 
-            // Оценим "значимость" тел для попадания в фокус
+            // Evaluate "importance" of bodies for focus
             const weighted = planets.map((p) => {
                 const dx = p.body.position.x - weightedCenter.x;
                 const dy = p.body.position.y - weightedCenter.y;
@@ -188,7 +103,9 @@ export class ThreeBodiesGame {
 
             weighted.sort((a, b) => b.weight - a.weight);
 
-            const coreCount = Math.floor(planets.length * 0.1);
+            // const coreCount = Math.floor(planets.length * 0.1);
+            // Number of most interesting planets
+            const coreCount = 6
             const core = weighted.slice(0, coreCount).map((e) => e.planet);
 
             const bounds = {
@@ -222,14 +139,16 @@ export class ThreeBodiesGame {
             const zoomY = canvasHeight / height;
             const targetZoom = Math.min(zoomX, zoomY);
 
-            const alpha = 0.05;
+            // Camera inertion
+            const alpha = 0.02;
+
             this.viewport.center.x += (cx - this.viewport.center.x) * alpha;
             this.viewport.center.y += (cy - this.viewport.center.y) * alpha;
             this.viewport.zoom += (targetZoom - this.viewport.zoom) * alpha;
         });
     }
 
-    public start() {
+    public override start() {
         for (const planet of this.planets) {
             planet.body.position.set(
                 Math.random() * 300 - 150,
@@ -240,32 +159,15 @@ export class ThreeBodiesGame {
                 Math.random() * 1 - 0.5
             );
         }
-
-        const loop = () => {
-            this.integrator.update((dt) => {
-                this.applyGravity(this.planets);
-                this.updateViewportToFit(this.planets);
-                for (const planet of this.planets) {
-                    planet.body.update(dt);
-                }
-                this.world.update(dt);
-                this.renderer.render(this.world);
-            });
-
-            this.renderer.render(this.world);
-            requestAnimationFrame(loop);
-        };
-
-        loop();
+        super.start();
     }
 
-    public resize(width: number, height: number) {
-        this.canvas.width = width;
-        this.canvas.height = height;
-        this.viewport.canvasSize.set(width, height);
+    protected override update(dt: number) {
+        this.applyGravity(this.planets);
+        this.updateViewportToFit(this.planets);
+        for (const planet of this.planets) {
+            planet.body.update(dt);
+        }
+        super.update(dt);
     }
-
-    public pause() {}
-
-    public resume() {}
 }

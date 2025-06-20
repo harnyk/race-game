@@ -87,14 +87,21 @@ Maintains contact state between frames.
 
 ---
 
+### Common Game Utilities — `src/common/`
+
+#### `BaseGame.ts`
+
+Abstract base providing common initialization for canvas, viewport, world and
+integrator. Implements the main game loop with `start`, `pause`, `resume` and
+`resize` helpers. Games extend this class and override `update`/`frame` for
+custom logic.
+
 ### Game Layer — `src/game/`
 
 #### `Game.ts`
 
-Main game loop. Initializes objects, integrates physics, handles collisions, rendering and game state.
-**ENTRY POINT** for Codex understanding the system.
-Provides `resize(width, height)` to adjust canvas and viewport when the browser window size changes.
-Exposes `pause()`, `resume()` and `togglePause()` to control the simulation loop.
+Extends `BaseGame`. Sets up car, blocks and Terrorist, handles collisions and
+camera updates. Game state management lives here.
 
 #### `Block.ts`
 
